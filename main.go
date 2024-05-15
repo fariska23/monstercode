@@ -3,15 +3,18 @@ package main
 import (
 	"encoding/json"
 	"encoding/xml"
+	"io/ioutil"
 	"log"
 	"monstercode/app"
 	"net/http"
 )
 
 func main() {
-	http.HandleFunc("/api/v1/products.json", productsJSONHandler) // JSON endpoint
-	http.HandleFunc("/api/v1/products.xml", productsXMLHandler)   // XML endpoint
-	log.Fatal(http.ListenAndServe(":8080", nil))
+	http.HandleFunc("/api/v1/products.json", productsJSONHandler)        // JSON endpoint for getting products
+	http.HandleFunc("/api/v1/products.xml", productsXMLHandler)          // XML endpoint for getting products
+	http.HandleFunc("/api/v1/add-products.json", addProductsJSONHandler) // JSON endpoint for adding products
+	http.HandleFunc("/api/v1/add-products.xml", addProductsXMLHandler)   // XML endpoint for adding products
+	log.Fatal(http.ListenAndServe(":8085", nil))
 }
 
 func productsJSONHandler(w http.ResponseWriter, r *http.Request) {
@@ -32,6 +35,51 @@ func productsXMLHandler(w http.ResponseWriter, r *http.Request) {
 
 	w.Header().Set("Content-Type", "text/xml")
 	xml.NewEncoder(w).Encode(products)
+}
+
+func addProductsJSONHandler(w http.ResponseWriter, r *http.Request) {
+	if r.Method != "POST" {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	var product app.Product
+	body, err := ioutil.ReadAll(r.Body)
+	if err != nil {
+		http.Error(w, "Error reading request", http.StatusBadRequest)
+		return
+	}
+
+	if err := json.Unmarshal(body, &product); err != nil {
+		http.Error(w, "Invalid JSON", http.StatusBadRequest)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(product)
+}
+
+func addProductsXMLHandler(w http.ResponseWriter, r *http.Request) {
+	if r.Method != "POST" {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	var product app.Product
+	body, err := ioutil.ReadAll(r.Body)
+	if err != nil {
+		http.Error(w, "Error reading request", http.StatusBadRequest)
+		return
+	}
+
+	if err := xml.Unmarshal(body, &product); err != nil {
+		http.Error(w, "Invalid XML", http.StatusBadRequest)
+		return
+	}
+
+	// Response in JSON format despite the input being XML
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(product)
 }
 
 // Helper function to create products
